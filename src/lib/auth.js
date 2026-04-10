@@ -148,17 +148,20 @@ export async function createAccount(username, password, displayName) {
   _signupInProgress = true
   try {
     const avatarIdx = Math.floor(Math.random() * 8)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: toEmail(key),
-      password,
-      options: {
-        data: {
-          username: key,
-          display_name: displayName || username,
-          avatar: avatarIdx,
+    const { data: authData, error: authError } = await withTimeout(
+      supabase.auth.signUp({
+        email: toEmail(key),
+        password,
+        options: {
+          data: {
+            username: key,
+            display_name: displayName || username,
+            avatar: avatarIdx,
+          },
         },
-      },
-    })
+      }),
+      10000
+    ).catch((e) => ({ data: {}, error: { message: e.message } }))
 
     if (authError) {
       if (authError.message?.includes('already registered')) {
@@ -191,10 +194,10 @@ export async function createAccount(username, password, displayName) {
 export async function login(username, password) {
   const key = username.toLowerCase().trim()
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: toEmail(key),
-    password,
-  })
+  const { data, error } = await withTimeout(
+    supabase.auth.signInWithPassword({ email: toEmail(key), password }),
+    10000
+  ).catch((e) => ({ data: null, error: { message: e.message } }))
   if (error) {
     if (error.message.includes('Invalid login')) {
       return { success: false, error: 'Invalid username or password' }
@@ -235,13 +238,16 @@ export async function changePassword(username, oldPassword, newPassword) {
   if (newPassword.length < 4) return { success: false, error: 'New password must be 4+ chars' }
   const key = username.toLowerCase().trim()
 
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: toEmail(key),
-    password: oldPassword,
-  })
+  const { error: signInError } = await withTimeout(
+    supabase.auth.signInWithPassword({ email: toEmail(key), password: oldPassword }),
+    10000
+  ).catch((e) => ({ error: { message: e.message } }))
   if (signInError) return { success: false, error: 'Current password is incorrect' }
 
-  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
+  const { error: updateError } = await withTimeout(
+    supabase.auth.updateUser({ password: newPassword }),
+    10000
+  ).catch((e) => ({ error: { message: e.message } }))
   if (updateError) return { success: false, error: updateError.message }
   return { success: true }
 }
