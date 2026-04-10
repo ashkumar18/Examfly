@@ -9,6 +9,20 @@
 --
 -- ============================================================
 
+-- 0. ADMIN HELPER (SECURITY DEFINER bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
 -- 1. PROFILES
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -21,21 +35,13 @@ CREATE TABLE profiles (
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read own profile"
+CREATE POLICY "Select own or admin"
   ON profiles FOR SELECT
-  USING (auth.uid() = id);
+  USING (auth.uid() = id OR public.is_admin());
 
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
-
-CREATE POLICY "Admin can read all profiles"
-  ON profiles FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
 
 CREATE POLICY "Anyone can insert own profile on signup"
   ON profiles FOR INSERT
@@ -65,17 +71,9 @@ CREATE POLICY "Users can insert own results"
   ON test_results FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can read own results"
+CREATE POLICY "Select own or admin"
   ON test_results FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Admin can read all results"
-  ON test_results FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (auth.uid() = user_id OR public.is_admin());
 
 -- 3. MASTERY (per-question tracking)
 CREATE TABLE mastery (
@@ -97,21 +95,13 @@ CREATE POLICY "Users can insert own mastery"
   ON mastery FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can read own mastery"
+CREATE POLICY "Select own or admin"
   ON mastery FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id OR public.is_admin());
 
 CREATE POLICY "Users can update own mastery"
   ON mastery FOR UPDATE
   USING (auth.uid() = user_id);
-
-CREATE POLICY "Admin can read all mastery"
-  ON mastery FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
 
 -- 4. STREAKS
 CREATE TABLE streaks (
@@ -128,21 +118,13 @@ CREATE POLICY "Users can insert own streak"
   ON streaks FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can read own streak"
+CREATE POLICY "Select own or admin"
   ON streaks FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id OR public.is_admin());
 
 CREATE POLICY "Users can update own streak"
   ON streaks FOR UPDATE
   USING (auth.uid() = user_id);
-
-CREATE POLICY "Admin can read all streaks"
-  ON streaks FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
 
 -- ============================================================
 -- INDEXES for performance
