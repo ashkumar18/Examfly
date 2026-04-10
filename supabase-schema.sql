@@ -2,6 +2,12 @@
 -- SSC PrepZone — Supabase Schema
 -- Run this in Supabase Dashboard → SQL Editor
 -- ============================================================
+--
+-- BEFORE running this SQL, go to:
+--   Authentication → Providers → Email
+--   and turn OFF "Confirm email" + "Secure email change"
+--
+-- ============================================================
 
 -- 1. PROFILES
 CREATE TABLE profiles (
