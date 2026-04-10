@@ -17,9 +17,16 @@ export function setCachedSession(session) {
   _cachedSession = session
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), ms)),
+  ])
+}
+
 export async function initAuth() {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session } } = await withTimeout(supabase.auth.getSession(), 8000)
     if (session) {
       const profile = await fetchProfile(session.user.id)
       if (profile) {
@@ -34,7 +41,7 @@ export async function initAuth() {
       }
     }
   } catch (err) {
-    console.error('initAuth failed:', err)
+    console.error('initAuth failed:', err.message)
   }
   _cachedSession = null
   return null
