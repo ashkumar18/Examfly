@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAllUsersForAdmin, getAvatarStyle, logout } from '../lib/auth'
+import { getAllUsersForAdmin, getAvatarStyle } from '../lib/auth'
 import { getStatsForUser, getResultsForUser, getStreakForUser } from '../lib/streak'
 
 export default function AdminPage({ onLogout }) {
@@ -49,8 +49,7 @@ export default function AdminPage({ onLogout }) {
   const regularUsers = users.filter((u) => u.role !== 'admin')
 
   async function handleLogout() {
-    await logout()
-    if (onLogout) onLogout()
+    if (onLogout) await onLogout()
   }
 
   if (loading) {

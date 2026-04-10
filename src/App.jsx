@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { seedDatabase } from './db/seedData'
-import { initAuth, onAuthChange } from './lib/auth'
+import { initAuth, onAuthChange, logout } from './lib/auth'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import SubtopicsPage from './pages/SubtopicsPage'
@@ -125,18 +125,23 @@ export default function App() {
 
   const isAdmin = session?.role === 'admin'
 
+  async function handleLogout() {
+    await logout()
+    setSession(null)
+  }
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={isAdmin ? <AdminPage onLogout={() => setSession(null)} /> : <HomePage onLogout={() => setSession(null)} />} />
-        <Route path="/configure" element={isAdmin ? <AdminPage onLogout={() => setSession(null)} /> : <SubtopicsPage />} />
-        <Route path="/test" element={isAdmin ? <AdminPage onLogout={() => setSession(null)} /> : <TestPage />} />
-        <Route path="/result" element={isAdmin ? <AdminPage onLogout={() => setSession(null)} /> : <ResultPage />} />
-        <Route path="/review" element={isAdmin ? <AdminPage onLogout={() => setSession(null)} /> : <ReviewPage />} />
-        <Route path="/analytics" element={<AnalyticsPage onLogout={() => setSession(null)} />} />
-        <Route path="/admin" element={<AdminPage onLogout={() => setSession(null)} />} />
+        <Route path="/" element={isAdmin ? <AdminPage onLogout={handleLogout} /> : <HomePage onLogout={handleLogout} />} />
+        <Route path="/configure" element={isAdmin ? <AdminPage onLogout={handleLogout} /> : <SubtopicsPage />} />
+        <Route path="/test" element={isAdmin ? <AdminPage onLogout={handleLogout} /> : <TestPage />} />
+        <Route path="/result" element={isAdmin ? <AdminPage onLogout={handleLogout} /> : <ResultPage />} />
+        <Route path="/review" element={isAdmin ? <AdminPage onLogout={handleLogout} /> : <ReviewPage />} />
+        <Route path="/analytics" element={<AnalyticsPage onLogout={handleLogout} />} />
+        <Route path="/admin" element={<AdminPage onLogout={handleLogout} />} />
         <Route path="/mastery" element={<MasteryQuestionsPage />} />
-        <Route path="/question-paper" element={isAdmin ? <AdminPage onLogout={() => setSession(null)} /> : <QuestionPaperPage />} />
+        <Route path="/question-paper" element={isAdmin ? <AdminPage onLogout={handleLogout} /> : <QuestionPaperPage />} />
       </Routes>
     </BrowserRouter>
   )

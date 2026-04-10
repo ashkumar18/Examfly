@@ -40,6 +40,7 @@ export default function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false)
   const [usernameStatus, setUsernameStatus] = useState(null)
   const [suggestions, setSuggestions] = useState([])
+  const [successMsg, setSuccessMsg] = useState('')
 
   useEffect(() => {
     if (mode !== 'signup' || username.length < 3) {
@@ -66,6 +67,7 @@ export default function LoginPage({ onLogin }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    setSuccessMsg('')
     setLoading(true)
 
     try {
@@ -91,13 +93,13 @@ export default function LoginPage({ onLogin }) {
         }
         const result = await createAccount(username, password, displayName)
         if (result.success) {
-          const loginResult = await login(username, password)
-          if (loginResult.success) {
-            onLogin(loginResult.session)
-          } else {
-            setError('Account created! Please sign in.')
-            setMode('login')
-          }
+          setError('')
+          setMode('login')
+          setConfirmPassword('')
+          setDisplayName('')
+          setUsernameStatus(null)
+          setSuggestions([])
+          setSuccessMsg('Account created! Please sign in.')
         } else {
           setError(result.error)
         }
@@ -192,6 +194,9 @@ export default function LoginPage({ onLogin }) {
             </div>
           )}
 
+          {successMsg && (
+            <div className="border border-success/20 bg-success/[0.06] px-3 py-2 text-xs font-bold text-success">{successMsg}</div>
+          )}
           {error && (
             <div className="border border-error/20 bg-error/[0.06] px-3 py-2 text-xs font-bold text-error">{error}</div>
           )}
@@ -225,7 +230,7 @@ export default function LoginPage({ onLogin }) {
           {mode === 'login' ? (
             <p className="text-xs text-text-muted">
               Don&apos;t have an account?{' '}
-              <button onClick={() => { setMode('signup'); setError(''); setUsernameStatus(null); setConfirmPassword('') }}
+              <button onClick={() => { setMode('signup'); setError(''); setSuccessMsg(''); setUsernameStatus(null); setConfirmPassword('') }}
                 className="font-bold uppercase tracking-wider text-primary-light underline underline-offset-2">
                 Create one
               </button>
@@ -233,7 +238,7 @@ export default function LoginPage({ onLogin }) {
           ) : (
             <p className="text-xs text-text-muted">
               Already have an account?{' '}
-              <button onClick={() => { setMode('login'); setError(''); setUsernameStatus(null); setConfirmPassword('') }}
+              <button onClick={() => { setMode('login'); setError(''); setSuccessMsg(''); setUsernameStatus(null); setConfirmPassword('') }}
                 className="font-bold uppercase tracking-wider text-primary-light underline underline-offset-2">
                 Sign in
               </button>

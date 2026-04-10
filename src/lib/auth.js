@@ -180,10 +180,13 @@ export async function createAccount(username, password, displayName) {
         .select('id')
         .eq('id', userId)
         .maybeSingle()
-      if (profile) return { success: true }
+      if (profile) break
       await new Promise((r) => setTimeout(r, 400))
       retries++
     }
+
+    await supabase.auth.signOut()
+    _cachedSession = null
 
     return { success: true }
   } finally {
@@ -231,7 +234,15 @@ export async function login(username, password) {
 
 export async function logout() {
   _cachedSession = null
-  await supabase.auth.signOut()
+  try {
+    await withTimeout(supabase.auth.signOut(), 5000)
+  } catch {
+    // Clear local storage manually if signOut hangs
+    const keys = Object.keys(localStorage)
+    keys.forEach((k) => {
+      if (k.startsWith('sb-')) localStorage.removeItem(k)
+    })
+  }
 }
 
 export async function changePassword(username, oldPassword, newPassword) {

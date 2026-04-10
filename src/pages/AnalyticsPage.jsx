@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getAllResults, getQuestionMasteryStats, getQuestionHistory, classifyQuestion, getWeakQuestionIds } from '../lib/streak'
 import { getQuestionsByIds, getQuestionsBySubject } from '../db/seedData'
 import { SUBJECT_MAP, SUBJECT_KEYS, shuffleArray, checkPasswordStrength } from '../lib/utils'
-import { getSession, getAvatarStyle, logout, changePassword } from '../lib/auth'
+import { getSession, getAvatarStyle, changePassword } from '../lib/auth'
 import useTestStore from '../store/useTestStore'
 
 const REVERSE_SUBJECT_MAP = {}
@@ -322,8 +322,7 @@ export default function AnalyticsPage({ onLogout }) {
   }
 
   async function handleLogout() {
-    await logout()
-    if (onLogout) onLogout()
+    if (onLogout) await onLogout()
   }
 
   async function startImprovementQuiz() {

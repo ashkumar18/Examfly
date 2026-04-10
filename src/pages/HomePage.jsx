@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getQuestionCount, getQuestionsBySubject, getQuestionsByIds } from '../db/seedData'
 import { SUBJECT_MAP, SUBJECT_KEYS, shuffleArray, checkPasswordStrength } from '../lib/utils'
 import { getStats, getStreak, getRecentTests, getWeakQuestionIds } from '../lib/streak'
-import { getSession, logout, getAvatarStyle, changePassword } from '../lib/auth'
+import { getSession, getAvatarStyle, changePassword } from '../lib/auth'
 import useTestStore from '../store/useTestStore'
 import StreakHeatmap from '../components/StreakHeatmap'
 
@@ -114,8 +114,7 @@ export default function HomePage({ onLogout }) {
   }
 
   async function handleLogout() {
-    await logout()
-    onLogout()
+    await onLogout()
   }
 
   const av = session ? getAvatarStyle(session.avatar || 0) : null
