@@ -7,6 +7,7 @@ function toEmail(username) {
 }
 
 let _cachedSession = null
+let _signupInProgress = false
 
 export function getCachedSession() {
   return _cachedSession
@@ -47,6 +48,8 @@ export function onAuthChange(callback) {
         callback(null)
         return
       }
+      if (_signupInProgress) return
+
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         const profile = await fetchProfile(session.user.id)
         if (profile) {
@@ -58,9 +61,6 @@ export function onAuthChange(callback) {
             avatar: profile.avatar ?? 0,
           }
           callback(_cachedSession)
-        } else {
-          _cachedSession = null
-          callback(null)
         }
       }
     }
@@ -120,6 +120,10 @@ export async function suggestUsernames(base) {
   return candidates.filter((c) => !taken.has(c)).slice(0, 3)
 }
 
+export function isSignupInProgress() {
+  return _signupInProgress
+}
+
 export async function createAccount(username, password, displayName) {
   if (!username || !password || username.length < 3) {
     return { success: false, error: 'Username must be 3+ chars' }
@@ -134,26 +138,47 @@ export async function createAccount(username, password, displayName) {
   const avail = await checkUsernameAvailable(key)
   if (!avail.available) return { success: false, error: avail.error }
 
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: toEmail(key),
-    password,
-  })
-  if (authError) return { success: false, error: authError.message }
+  _signupInProgress = true
+  try {
+    const avatarIdx = Math.floor(Math.random() * 8)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: toEmail(key),
+      password,
+      options: {
+        data: {
+          username: key,
+          display_name: displayName || username,
+          avatar: avatarIdx,
+        },
+      },
+    })
 
-  const userId = authData.user?.id
-  if (!userId) return { success: false, error: 'Signup failed — no user ID returned' }
+    if (authError) {
+      if (authError.message?.includes('already registered')) {
+        return { success: false, error: 'This username is already taken. Try a different one.' }
+      }
+      return { success: false, error: authError.message }
+    }
 
-  const avatarIdx = Math.floor(Math.random() * 8)
-  const { error: profileError } = await supabase.from('profiles').insert({
-    id: userId,
-    username: key,
-    display_name: displayName || username,
-    role: 'user',
-    avatar: avatarIdx,
-  })
-  if (profileError) return { success: false, error: profileError.message }
+    const userId = authData.user?.id
+    if (!userId) return { success: false, error: 'Signup failed — no user ID returned' }
 
-  return { success: true }
+    let retries = 0
+    while (retries < 5) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle()
+      if (profile) return { success: true }
+      await new Promise((r) => setTimeout(r, 400))
+      retries++
+    }
+
+    return { success: true }
+  } finally {
+    _signupInProgress = false
+  }
 }
 
 export async function login(username, password) {
@@ -169,8 +194,19 @@ export async function login(username, password) {
     }
     return { success: false, error: error.message }
   }
-  const profile = await fetchProfile(data.user.id)
-  if (!profile) return { success: false, error: 'Profile not found' }
+
+  let profile = null
+  let retries = 0
+  while (retries < 3) {
+    profile = await fetchProfile(data.user.id)
+    if (profile) break
+    await new Promise((r) => setTimeout(r, 300))
+    retries++
+  }
+
+  if (!profile) {
+    return { success: false, error: 'Unable to load profile. Please try again.' }
+  }
 
   const session = {
     id: data.user.id,

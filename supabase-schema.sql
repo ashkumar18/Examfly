@@ -153,11 +153,38 @@ CREATE INDEX idx_mastery_user ON mastery(user_id);
 CREATE INDEX idx_mastery_user_question ON mastery(user_id, question_id);
 
 -- ============================================================
+-- AUTO-CREATE PROFILE ON SIGNUP (trigger)
+-- This function runs with elevated privileges (SECURITY DEFINER)
+-- so it can insert into profiles even with RLS enabled.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, display_name, role, avatar)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)),
+    COALESCE(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1)),
+    'user',
+    COALESCE((new.raw_user_meta_data ->> 'avatar')::int, 0)
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN new;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
 -- ADMIN SETUP
 -- After running this SQL:
--- 1. Create an admin user via Supabase Auth dashboard
---    (email: admin@sscprepzone.app, set a password)
+-- 1. Sign up as "admin" through the app with any password
 -- 2. Then run:
---    INSERT INTO profiles (id, username, display_name, role, avatar)
---    VALUES ('<uuid-from-auth-dashboard>', 'admin', 'Admin', 'admin', 0);
+--    UPDATE profiles SET role = 'admin' WHERE username = 'admin';
 -- ============================================================

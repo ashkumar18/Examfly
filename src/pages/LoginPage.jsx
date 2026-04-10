@@ -92,13 +92,18 @@ export default function LoginPage({ onLogin }) {
         const result = await createAccount(username, password, displayName)
         if (result.success) {
           const loginResult = await login(username, password)
-          if (loginResult.success) onLogin(loginResult.session)
-          else setError(loginResult.error)
+          if (loginResult.success) {
+            onLogin(loginResult.session)
+          } else {
+            setError('Account created! Please sign in.')
+            setMode('login')
+          }
         } else {
           setError(result.error)
         }
       }
     } catch (err) {
+      console.error('Auth error:', err)
       setError(err.message || 'Something went wrong')
     }
     setLoading(false)
