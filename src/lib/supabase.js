@@ -8,6 +8,7 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      lockAcquireTimeout: 3000,
     },
   }
 )
